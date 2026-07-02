@@ -12,8 +12,10 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import time
+from multiprocessing import Pool
 from pathlib import Path
 
 import numpy as np
@@ -44,9 +46,25 @@ def sample_params(rng: np.random.Generator) -> dict:
     return dict(mu=mu, sigma=sigma, x_theta=x_t, a=a, r2=r2, mach=mach)
 
 
-def generate(n: int, seed: int, v_max: float, n_v: int):
+def _solve_one(task):
+    """Worker: p-k sweep for one sampled section (top-level for pickling)."""
+    kw, v_grid = task
+    res = pk_sweep(Section(**kw), v_grid)
+    row = [kw["mu"], kw["sigma"], kw["x_theta"], kw["a"], kw["r2"], kw["mach"]]
+    if res.flutter_V is not None:
+        fl = (res.flutter_V, res.flutter_omega, res.flutter_branch, res.flutter_k)
+    else:
+        fl = None
+    return row, res.damping, res.frequency, fl
+
+
+def generate(n: int, seed: int, v_max: float, n_v: int, workers: int = 0):
     rng = np.random.default_rng(seed)
     V_grid = np.linspace(0.05, v_max, n_v)
+
+    # sample every config up front in the main process: the dataset is a pure
+    # function of the seed, independent of worker count
+    tasks = [(sample_params(rng), V_grid) for _ in range(n)]
 
     params = np.zeros((n, 6))
     gamma = np.zeros((n, 2, n_v))
@@ -58,24 +76,27 @@ def generate(n: int, seed: int, v_max: float, n_v: int):
     has_flutter = np.zeros(n, dtype=bool)
 
     t0 = time.time()
-    for i in range(n):
-        kw = sample_params(rng)
-        sec = Section(**kw)
-        res = pk_sweep(sec, V_grid)
 
-        params[i] = [kw["mu"], kw["sigma"], kw["x_theta"], kw["a"], kw["r2"], kw["mach"]]
-        gamma[i] = res.damping
-        omega[i] = res.frequency
-        if res.flutter_V is not None:
+    def _store(i, out):
+        row, gam, om, fl = out
+        params[i] = row
+        gamma[i] = gam
+        omega[i] = om
+        if fl is not None:
             has_flutter[i] = True
-            flutter_V[i] = res.flutter_V
-            flutter_omega[i] = res.flutter_omega
-            flutter_branch[i] = res.flutter_branch
-            flutter_k[i] = res.flutter_k
-
-        if (i + 1) % 50 == 0:
+            flutter_V[i], flutter_omega[i], flutter_branch[i], flutter_k[i] = fl
+        if (i + 1) % 200 == 0:
             rate = (i + 1) / (time.time() - t0)
-            print(f"  {i+1}/{n}  ({rate:.1f} cfg/s)", flush=True)
+            eta = (n - i - 1) / max(rate, 1e-9)
+            print(f"  {i+1}/{n}  ({rate:.1f} cfg/s, eta {eta/60:.1f} min)", flush=True)
+
+    if workers and workers > 1:
+        with Pool(workers) as pool:
+            for i, out in enumerate(pool.imap(_solve_one, tasks, chunksize=8)):
+                _store(i, out)
+    else:
+        for i, task in enumerate(tasks):
+            _store(i, _solve_one(task))
 
     return dict(
         param_names=np.array(["mu", "sigma", "x_theta", "a", "r2", "mach"]),
@@ -93,10 +114,14 @@ def main():
     ap.add_argument("--out", type=str, default="data/tierA_dev.npz")
     ap.add_argument("--vmax", type=float, default=8.0)
     ap.add_argument("--nv", type=int, default=320)
+    ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 2),
+                    help="parallel p-k workers (dataset is seed-deterministic "
+                         "regardless of worker count); 0/1 = serial")
     args = ap.parse_args()
 
-    print(f"generating {args.n} sections (seed {args.seed}) ...")
-    d = generate(args.n, args.seed, args.vmax, args.nv)
+    print(f"generating {args.n} sections (seed {args.seed}, "
+          f"{args.workers} workers) ...")
+    d = generate(args.n, args.seed, args.vmax, args.nv, workers=args.workers)
 
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)

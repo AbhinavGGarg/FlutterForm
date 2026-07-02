@@ -29,7 +29,7 @@ DEFAULTS = {
     "train.batch": 32,
     "train.lr": 3e-3,
     "seed": 42,
-    "device": "cpu",
+    "device": "auto",   # auto -> cuda if available, else cpu
     "out": "results",
     "model.d": 12,
     "model.iters": 6,
@@ -53,6 +53,8 @@ def main(argv=None):
     cfg = parse_overrides(sys.argv[1:] if argv is None else argv)
     torch.manual_seed(cfg["seed"])
     np.random.seed(cfg["seed"])
+    if cfg["device"] == "auto":
+        cfg["device"] = "cuda" if torch.cuda.is_available() else "cpu"
     dev = torch.device(cfg["device"])
 
     if cfg["mode"] != "tierA":

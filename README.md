@@ -92,12 +92,14 @@ tests/                 test_physics.py · test_model.py   (20 gates)
 train.py               key=value config, smoke: mode=tierA train.max_steps=1
 ```
 
-## ROCm / MI300X notes
+## GPU notes (CUDA or ROCm)
 
 Pure PyTorch — no flash-attn, no xformers, no custom Triton kernels, no
 `torch.linalg.eig` in the training path (closed-form 2×2 instead). The eigen
-head runs identically on CPU and ROCm wheels. Dataset generation is
-CPU-bound numpy/scipy.
+head runs identically on CPU, CUDA, and ROCm wheels; `train.py` defaults to
+`device=auto` (CUDA if available). Dataset generation is CPU-bound
+numpy/scipy and parallelizes across cores (`--workers`, seed-deterministic
+regardless of worker count).
 
 ## License
 
