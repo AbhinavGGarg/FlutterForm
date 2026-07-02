@@ -20,6 +20,7 @@ from flutterform.physics import (
     Section,
     kmethod_flutter,
     pk_sweep,
+    pk_sweep_tracked,
     theodorsen,
 )
 
@@ -103,6 +104,46 @@ class TestCrossMethod:
         assert res.flutter_V is not None
         # coalescence: flutter frequency sits between omega_h and omega_theta
         assert sec.sigma < res.flutter_omega < 1.0
+
+
+class TestVectorizedEquivalence:
+    @pytest.mark.parametrize("seed", [0, 1, 2, 3])
+    def test_vectorized_matches_tracked_reference(self, seed):
+        """The vectorized sweep must agree with the MAC-tracked reference:
+        same flutter point, same frequency-sorted trajectories."""
+        rng = np.random.default_rng(seed)
+        for _ in range(3):
+            x_t = rng.uniform(0.05, 0.35)
+            sec = Section(
+                mu=float(np.exp(rng.uniform(np.log(5), np.log(100)))),
+                sigma=rng.uniform(0.2, 0.9),
+                x_theta=x_t,
+                a=rng.uniform(-0.5, 0.1),
+                r2=rng.uniform(max(0.1, 1.3 * x_t**2), 0.6),
+                mach=rng.uniform(0.0, 0.7),
+            )
+            V = np.linspace(0.05, 8.0, 320)
+            fast, ref = pk_sweep(sec, V), pk_sweep_tracked(sec, V)
+
+            assert (fast.flutter_V is None) == (ref.flutter_V is None)
+            if fast.flutter_V is not None:
+                assert fast.flutter_V == pytest.approx(ref.flutter_V, rel=5e-3)
+                assert fast.flutter_omega == pytest.approx(
+                    ref.flutter_omega, rel=1e-2)
+
+            # frequency-sorted trajectories must match pointwise through the
+            # flutter crossing. Deep post-flutter (V >> V_F) the unstable
+            # root is near-defective and the converged point is legitimately
+            # scheme-dependent, so the comparison stops at 1.2 V_F.
+            def sorted_traj(res):
+                order = np.argsort(np.abs(res.p.imag), axis=0)
+                return np.take_along_axis(res.p, order, axis=0)
+
+            v_cmp = 1.2 * fast.flutter_V if fast.flutter_V else V[-1]
+            m = V <= v_cmp
+            pf, pr = sorted_traj(fast)[:, m], sorted_traj(ref)[:, m]
+            np.testing.assert_allclose(pf.imag, pr.imag, atol=2e-3)
+            np.testing.assert_allclose(pf.real, pr.real, atol=2e-3)
 
 
 class TestSanity:

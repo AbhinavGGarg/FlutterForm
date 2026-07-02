@@ -81,14 +81,20 @@ class Section:
         return theodorsen(k) / beta
 
     def aero_matrix(self, k, V) -> np.ndarray:
-        """Generalized aerodynamic force matrix G(k, V), complex 2x2.
+        """Generalized aerodynamic force matrix G(k, V), complex (..., 2, 2).
 
         For harmonic motion [h, theta] e^{i w t} with w = k V / b:
             [-L; M] = G(k, V) @ [h; theta]
         so the flutter equation reads (p^2 Ms + Ks - G) x = 0.
+
+        Shape-polymorphic: scalar k, V -> (2, 2); arrays broadcast to
+        (*shape, 2, 2). Used both pointwise (bisection refinement) and over
+        whole velocity grids at once (vectorized sweep).
         """
         rho, b = 1.0, 1.0
         a = self.a
+        k = np.asarray(k, dtype=float)
+        V = np.asarray(V, dtype=float)
         w = k * V / b
         C = self._ck(k)
         iw = 1j * w
@@ -105,7 +111,11 @@ class Section:
             + circ * b * (a + 0.5) * (V + b * (0.5 - a) * iw)
         )
 
-        return np.array([[-f11, -f12], [f21, f22]], dtype=complex)
+        out = np.stack(
+            [np.stack([-f11, -f12], axis=-1), np.stack([f21, f22], axis=-1)],
+            axis=-2,
+        )
+        return out.astype(complex)
 
     def aero_matrix_khat(self, k) -> np.ndarray:
         """Frequency-factored aero matrix: G(k, V) = w^2 * Ghat(k).
