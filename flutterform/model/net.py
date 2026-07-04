@@ -63,17 +63,19 @@ def trajectory_loss(gamma_hat, omega_hat, gamma, omega,
     return (w_gamma * (w * hg).sum() + w_omega * (w * ho).sum()) / denom
 
 
-def flutter_point_loss(gamma_hat, omega_hat, V, flutter_V, flutter_omega):
-    """Residual-at-the-known-crossing penalty.
+def flutter_point_loss(gamma_hat, omega_hat, V, flutter_V, flutter_omega,
+                       margin: float = 0.03, delta_frac: float = 0.12):
+    """Sharp-up-crossing penalty at the known flutter speed.
 
-    At the true flutter speed V_F the coalescing branch must have zero damping
-    and the true flutter frequency. We interpolate the model's V-g / V-f
-    trajectories at V_F, pick the branch whose frequency is closest to the
-    true omega_F (that IS the coalescing branch), and penalize:
-      - its damping (should be exactly 0 at V_F), and
-      - its frequency error (should equal omega_F).
-    This gives a strong local gradient exactly where the flutter answer is
-    decided, without a fragile soft-argmin over the whole grid.
+    At the true V_F the coalescing branch must (a) have zero damping, and
+    (b) cross zero with real positive slope — clearly negative just below V_F,
+    clearly positive just above. Penalizing only (a) has a degenerate solution:
+    flatten the whole damping curve to ~0, which minimizes the residual but
+    destroys the crossing (observed: val V_F blew up while trajectory loss
+    fell). The margin terms forbid that flat solution.
+
+    Branch selection (which mode coalesces) is by frequency match to omega_F;
+    index only, no gradient through the argmin.
     """
     from ..flutter_point import interp_at
 
@@ -81,18 +83,23 @@ def flutter_point_loss(gamma_hat, omega_hat, V, flutter_V, flutter_omega):
     if valid.sum() == 0:
         return gamma_hat.new_zeros(())
 
-    gam_vf = interp_at(gamma_hat, V, flutter_V)          # (B, 2)
-    om_vf = interp_at(omega_hat.abs(), V, flutter_V)     # (B, 2)
+    grid_step = (V[1] - V[0])
+    dV = (delta_frac * flutter_V).clamp_min(grid_step)
+    g_lo = interp_at(gamma_hat, V, (flutter_V - dV).clamp_min(V[0]))   # (B,2)
+    g_0 = interp_at(gamma_hat, V, flutter_V)
+    g_hi = interp_at(gamma_hat, V, (flutter_V + dV).clamp_max(V[-1]))
+    om_0 = interp_at(omega_hat.abs(), V, flutter_V)
 
-    # coalescing branch = the one whose frequency matches omega_F (index only,
-    # no grad through the selection)
     with torch.no_grad():
-        b = (om_vf - flutter_omega.unsqueeze(-1)).abs().argmin(dim=-1)
-    ar = torch.arange(gam_vf.shape[0], device=gam_vf.device)
-    gam_sel = gam_vf[ar, b]                              # (B,)
-    om_sel = om_vf[ar, b]
+        b = (om_0 - flutter_omega.unsqueeze(-1)).abs().argmin(dim=-1)
+    ar = torch.arange(gamma_hat.shape[0], device=gamma_hat.device)
+    gl, g0, gh = g_lo[ar, b], g_0[ar, b], g_hi[ar, b]
+    om_sel = om_0[ar, b]
 
-    gv, os_, ov = gam_sel[valid], om_sel[valid], flutter_omega[valid]
-    l_damp = (gv ** 2).mean()
-    l_freq = (((os_ - ov) / ov.clamp_min(0.05)) ** 2).mean()
-    return l_damp + 0.5 * l_freq
+    v = valid
+    l_zero = (g0[v] ** 2).mean()
+    l_below = torch.relu(margin + gl[v]).mean()   # want damping < -margin below
+    l_above = torch.relu(margin - gh[v]).mean()   # want damping > +margin above
+    ov = flutter_omega[v]
+    l_freq = (((om_sel[v] - ov) / ov.clamp_min(0.05)) ** 2).mean()
+    return l_zero + l_below + l_above + 0.5 * l_freq

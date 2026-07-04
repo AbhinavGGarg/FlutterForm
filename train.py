@@ -124,6 +124,10 @@ def main(argv=None):
     print(f"FlutterForm: {model.n_parameters()} params (<10k) | "
           f"train {len(tr)} / val {len(va)} | device {dev}", flush=True)
 
+    out = Path(cfg["out"])
+    out.mkdir(parents=True, exist_ok=True)
+    best_vf, best_state = float("inf"), None
+
     step, t0, losses, history = 0, time.time(), [], []
     while step < cfg["train.max_steps"]:
         for batch in dl:
@@ -159,19 +163,27 @@ def main(argv=None):
                 r = val_report(model, va, V, dev)
                 r["step"] = step
                 history.append(r)
+                flag = ""
+                if np.isfinite(r["vf_med"]) and r["vf_med"] < best_vf:
+                    best_vf = r["vf_med"]
+                    best_state = {k: v.detach().cpu().clone()
+                                  for k, v in model.state_dict().items()}
+                    flag = "  <- best"
                 print(f"  [val] traj {r['val_traj']:.5f}  V_F med "
                       f"{r['vf_med']*100:.2f}%  p90 {r['vf_p90']*100:.1f}%  "
-                      f"<10% {r['within10']*100:.1f}%  cov {r['coverage']*100:.1f}%",
-                      flush=True)
+                      f"<10% {r['within10']*100:.1f}%  cov {r['coverage']*100:.1f}%"
+                      f"{flag}", flush=True)
             step += 1
 
-    out = Path(cfg["out"])
-    out.mkdir(parents=True, exist_ok=True)
-    torch.save({"model": model.state_dict(), "cfg": cfg}, out / "flutterform_tierA.pt")
+    # save the BEST-val checkpoint (robust to late-training divergence)
+    final_state = best_state if best_state is not None else model.state_dict()
+    torch.save({"model": final_state, "cfg": cfg, "best_val_vf": best_vf},
+               out / "flutterform_tierA.pt")
     (out / "train_metrics.json").write_text(json.dumps(
         {"cfg": cfg, "final_loss": losses[-1] if losses else None,
-         "val_history": history}, indent=2))
-    print(f"saved checkpoint + metrics to {out}/", flush=True)
+         "best_val_vf_median": best_vf, "val_history": history}, indent=2))
+    print(f"saved BEST checkpoint (val V_F median {best_vf*100:.2f}%) + "
+          f"metrics to {out}/", flush=True)
 
 
 if __name__ == "__main__":
