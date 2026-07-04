@@ -18,9 +18,21 @@ class TierADataset(Dataset):
     """
 
     def __init__(self, path: str | Path, n_v: int = 64,
-                 flutter_only: bool = True):
+                 flutter_only: bool = True, split: str = "all",
+                 val_frac: float = 0.1, split_seed: int = 1234):
         d = np.load(path)
         keep = d["has_flutter"] if flutter_only else np.ones(len(d["params"]), bool)
+
+        # deterministic train/val split over the KEPT configs
+        if split != "all":
+            kept_idx = np.where(keep)[0]
+            rng = np.random.default_rng(split_seed)
+            perm = rng.permutation(len(kept_idx))
+            n_val = int(round(val_frac * len(kept_idx)))
+            sel = perm[n_val:] if split == "train" else perm[:n_val]
+            mask = np.zeros(len(d["params"]), bool)
+            mask[kept_idx[sel]] = True
+            keep = mask
 
         idx = np.linspace(0, d["V_grid"].size - 1, n_v).round().astype(int)
         self.V = torch.tensor(d["V_grid"][idx], dtype=torch.float32)
