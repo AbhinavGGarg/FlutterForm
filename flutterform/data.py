@@ -17,14 +17,25 @@ class TierADataset(Dataset):
     (the generator reports — never hides — how many were flagged out).
     """
 
+    # param column indices for extrapolation holdouts
+    PCOL = {"mu": 0, "sigma": 1, "x_theta": 2, "a": 3, "r2": 4, "mach": 5}
+
     def __init__(self, path: str | Path, n_v: int = 64,
                  flutter_only: bool = True, split: str = "all",
-                 val_frac: float = 0.1, split_seed: int = 1234):
+                 val_frac: float = 0.1, split_seed: int = 1234,
+                 holdout_col: str | None = None, holdout_thresh: float = None):
         d = np.load(path)
         keep = d["has_flutter"] if flutter_only else np.ones(len(d["params"]), bool)
 
-        # deterministic train/val split over the KEPT configs
-        if split != "all":
+        if holdout_col is not None:
+            # EXTRAPOLATION split: train below threshold, test at/above it.
+            # No random leakage — a whole region of parameter space is unseen.
+            col = d["params"][:, self.PCOL[holdout_col]]
+            below = col < holdout_thresh
+            region = below if split == "train" else ~below
+            keep = keep & region
+        elif split != "all":
+            # deterministic random train/val split over the KEPT configs
             kept_idx = np.where(keep)[0]
             rng = np.random.default_rng(split_seed)
             perm = rng.permutation(len(kept_idx))
