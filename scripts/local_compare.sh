@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
-# Full FlutterForm-vs-MLP comparison on CPU (uncontended local dev).
-# Usage: bash scripts/local_compare.sh [PY] [STEPS] [WF]
+# Full FlutterForm-vs-MLP comparison matrix.
+# Usage: bash scripts/local_compare.sh [PY] [STEPS] [WF] [DEVICE]
 set -e
 PY=${1:-.venv/bin/python}
 STEPS=${2:-20000}
-WF=${3:-3.0}
+WF=${3:-2.0}
+DEV=${4:-cpu}
 D=data/tierA_50k.npz
 O=results_cmp
 mkdir -p $O
-FF="$PY train.py mode=tierA data=$D device=cpu train.batch=256 model.d=16 train.w_flutter=$WF"
-BL="$PY train_baseline.py data=$D device=cpu"
-EV="$PY eval.py data=$D device=cpu"
+FF="$PY train.py mode=tierA data=$D device=$DEV train.batch=256 model.d=16 train.w_flutter=$WF train.eval_every=2000"
+BL="$PY train_baseline.py data=$D device=$DEV"
+EV="$PY eval.py data=$D device=$DEV"
 
 echo "###### in-distribution ######"
 $FF train.max_steps=$STEPS out=$O/ff_indist | tail -2
