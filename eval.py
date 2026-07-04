@@ -25,7 +25,8 @@ PARAM_NAMES = ["mu", "sigma", "x_theta", "a", "r2", "mach"]
 
 def parse(argv):
     cfg = {"ckpt": "results_d16/flutterform_tierA.pt", "data": "data/tierA_50k.npz",
-           "baseline": "", "out": "", "n_v": 96, "device": "auto"}
+           "baseline": "", "out": "", "n_v": 96, "device": "auto",
+           "holdout.col": "", "holdout.thresh": 0.0}
     for tok in argv:
         k, v = tok.split("=", 1)
         cfg[k] = type(cfg[k])(v) if k in cfg and not isinstance(cfg[k], str) else v
@@ -134,7 +135,9 @@ def region_breakdown(pred_vf, true_vf, params):
 def main():
     cfg = parse(sys.argv[1:])
     dev = torch.device(cfg["device"])
-    va = TierADataset(cfg["data"], split="val", n_v=cfg["n_v"])
+    ho = ({} if not cfg["holdout.col"]
+          else dict(holdout_col=cfg["holdout.col"], holdout_thresh=cfg["holdout.thresh"]))
+    va = TierADataset(cfg["data"], split="val", n_v=cfg["n_v"], **ho)
     params_np = va.params.numpy()
     true_vf = va.flutter_V.numpy()
 

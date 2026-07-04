@@ -36,6 +36,9 @@ DEFAULTS = {
     "train.warmup": 200,
     "train.eval_every": 500,
     "train.n_v": 64,
+    "train.frac": 1.0,       # subsample train split (data-efficiency curves)
+    "holdout.col": "",       # e.g. "mu" for an extrapolation split
+    "holdout.thresh": 0.0,   # train below, val at/above
     "seed": 42,
     "device": "auto",
     "out": "results",
@@ -102,8 +105,17 @@ def main(argv=None):
         raise SystemExit(f"mode {cfg['mode']!r} not implemented yet (tierA only)")
 
     common = dict(n_v=cfg["train.n_v"])
+    if cfg["holdout.col"]:
+        common.update(holdout_col=cfg["holdout.col"],
+                      holdout_thresh=cfg["holdout.thresh"])
     tr = TierADataset(cfg["data"], split="train", **common)
     va = TierADataset(cfg["data"], split="val", **common)
+    if cfg["train.frac"] < 1.0:
+        n = max(64, int(cfg["train.frac"] * len(tr)))
+        keep = torch.randperm(len(tr))[:n]
+        for attr in ("params", "gamma", "omega", "flutter_V", "flutter_omega",
+                     "flutter_branch"):
+            setattr(tr, attr, getattr(tr, attr)[keep])
     dl = DataLoader(tr, batch_size=cfg["train.batch"], shuffle=True, drop_last=True)
     V = tr.V.to(dev)
 

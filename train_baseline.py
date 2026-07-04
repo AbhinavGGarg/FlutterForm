@@ -26,6 +26,8 @@ DEFAULTS = {
     "train.frac": 1.0,
     "train.hidden": 48,
     "train.depth": 3,
+    "holdout.col": "",
+    "holdout.thresh": 0.0,
     "seed": 42,
     "device": "auto",
     "out": "results_baseline",
@@ -58,8 +60,10 @@ def main(argv=None):
         cfg["device"] = "cuda" if torch.cuda.is_available() else "cpu"
     dev = torch.device(cfg["device"])
 
-    tr = TierADataset(cfg["data"], split="train", n_v=8)
-    va = TierADataset(cfg["data"], split="val", n_v=8)
+    ho = ({} if not cfg["holdout.col"]
+          else dict(holdout_col=cfg["holdout.col"], holdout_thresh=cfg["holdout.thresh"]))
+    tr = TierADataset(cfg["data"], split="train", n_v=8, **ho)
+    va = TierADataset(cfg["data"], split="val", n_v=8, **ho)
     xtr, ytr = load_xy(tr)
     xva, yva = load_xy(va)
 
