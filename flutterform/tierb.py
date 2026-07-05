@@ -165,6 +165,15 @@ class Wing:
         Q[nb:, nb:] = G[1, 1] * Itt
         return Q
 
+    def aero_khat(self, k):
+        """Frequency-factored generalized AIC Qhat(k): Q(k,V) = (kV/b)^2 Qhat(k).
+
+        Every aero term scales as w^2 = (kV/b)^2 once V = w b / k, so Qhat is
+        V-independent. Used by the differentiable N-mode head (nmode.py)."""
+        V = 1.0
+        w2 = (k * V / self.b) ** 2
+        return self.aero(k, V) / w2
+
 
 def _mode_p(lam):
     p = np.sqrt(lam.astype(complex))
