@@ -5,3 +5,5 @@ __pycache__/
 results/
 data/*.npz
 .DS_Store
+
+voice-profile.md
