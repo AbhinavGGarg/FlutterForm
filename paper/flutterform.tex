@@ -12,7 +12,10 @@
 
 \title{\textbf{FlutterForm}: An Eigen-Structured Modal-Coupling Transformer\\
 for Interpretable, Differentiable Flutter Prediction}
-\author{Abhinav Garg \\ \small Exea Labs}
+\author{Abhinav Garg\thanks{\textbf{Exea Labs} --- an independent, merit-driven
+student research collective. \url{https://exealabs.vercel.app} \quad Code:
+\url{https://github.com/AbhinavGGarg/FlutterForm}} \\[2pt]
+\normalsize Exea Labs}
 \date{}
 
 \begin{document}
@@ -95,6 +98,31 @@ reproduces the classic \textbf{Goland wing} flutter point to \textbf{0.1\%}
 ($137.0$ vs.\ $137.2$~m/s), converged across mode counts.
 
 \section{Results}
+All results use a validated Theodorsen/p--k ground truth on 50k typical-section
+configurations; the model is $6{,}620$ parameters. Table~\ref{tab:summary}
+summarizes the comparison against a capacity-matched black-box MLP.
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{lcc}
+\toprule
+& \textbf{FlutterForm} & Black-box MLP \\
+\midrule
+In-distribution median error & $2.7\%$ & $\mathbf{1.4\%}$ \\
+Data efficiency (all train sizes) & --- & \textbf{wins} \\
+Extrapolation (far, $\mu=80\text{--}100$) & $\mathbf{\sim\!10.5\%}$ & $\sim\!16.8\%$ \\
+Mode-ID accuracy (which modes coalesce) & $\mathbf{73\%}$ & n/a (scalar) \\
+Full V--g/V--f flutter diagram & \textbf{yes} & no \\
+Inverse design (p--k-verified) & $\mathbf{+37\%}$ & --- \\
+\bottomrule
+\end{tabular}
+\caption{FlutterForm vs.\ a capacity-matched black box. The black box wins the
+easy in-distribution regression and data efficiency; the physics-structured
+glass-box wins extrapolation, mechanism recovery, the full flutter diagram, and
+differentiable design.}
+\label{tab:summary}
+\end{table}
+
 \paragraph{In-distribution (the black box wins).}
 On a held-out random split, a capacity-matched MLP predicting the scalar flutter
 speed beats FlutterForm ($1.4\%$ vs.\ $2.7\%$ median error). Predicting one number
@@ -164,7 +192,19 @@ A tiny physics-structured glass-box does not beat a black box at the easy
 in-distribution regression, but it \emph{extrapolates} better, \emph{explains} the
 mechanism, predicts the full diagram, and enables verified \emph{gradient-based
 design} --- capabilities a scalar surrogate structurally lacks. Physics structure
-buys generalization and interpretability, not raw fit. Code, data, and figures:
-\url{https://github.com/AbhinavGGarg/FlutterForm}.
+buys generalization and interpretability, not raw fit.
+
+\section*{Acknowledgments}
+This work was carried out at \textbf{Exea Labs}
+(\url{https://exealabs.vercel.app}), an independent, merit-driven student
+research collective, on Exea's compute (an AMD Instinct MI300X node). Thanks to
+the Exea Labs team for the ML-lab sprint framework, mentorship, and review.
+
+\section*{Reproducibility}
+All code, the data generator, trained checkpoints' recipes, the evaluation
+suite, and every figure are open source and reproducible from a fixed seed:
+\url{https://github.com/AbhinavGGarg/FlutterForm}. The physics core is checked
+by 32 automated tests, including the Hodges \& Pierce ($0.9\%$) and Goland wing
+($0.1\%$) anchors.
 
 \end{document}
