@@ -1,0 +1,170 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+\usepackage{caption}
+\captionsetup{font=small}
+\graphicspath{{../results_cmp/figs/}}
+
+\title{\textbf{FlutterForm}: An Eigen-Structured Modal-Coupling Transformer\\
+for Interpretable, Differentiable Flutter Prediction}
+\author{Abhinav Garg \\ \small Exea Labs}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Flutter --- the dynamic aeroelastic instability in which two structural modes
+coalesce and oscillations grow unbounded --- is a safety-critical constraint
+whose prediction still relies on expensive coupled eigen-analyses, and whose
+recent neural surrogates are opaque black boxes. We present \textbf{FlutterForm},
+a $6.6$k-parameter physics-structured model that tokenizes a lifting surface
+into its structural modes, forms the aerodynamic coupling operator by
+\emph{pairwise outer-product attention}, and reads the flutter boundary from a
+\emph{differentiable p--k eigen-solve}. On a $50$k-section benchmark with a
+validated Theodorsen/p--k ground truth, we report honestly: a capacity-matched
+black-box MLP is more accurate \emph{in-distribution} ($1.4\%$ vs.\ $2.7\%$
+median flutter-speed error) and more data-efficient. FlutterForm's value is
+elsewhere and is real: it \emph{extrapolates} far better to unseen mass ratios
+(the black box's error grows up to $10\times$ while FlutterForm's stays flat),
+it recovers \emph{which modes coalesce} ($73\%$; a scalar regressor cannot),
+it predicts the full V--g/V--f flutter diagram, and --- being differentiable ---
+it raises a section's flutter speed by \textbf{$+37\%$ (verified by the exact
+p--k solver)} through gradient-based redesign. The physics core reproduces the
+Hodges \& Pierce typical-section flutter point to $0.9\%$ and the classic Goland
+3-D wing to $0.1\%$. Code, data, and all figures are open source.
+\end{abstract}
+
+\section{Introduction}
+Flutter sets the structural speed limit of aircraft, rotors, and turbomachinery,
+and clearing it drives real mass and cost. Yet it enters design as an opaque,
+non-differentiable gate: an expensive p--k or CFD--CSD eigen-analysis returns a
+single flutter speed with no gradient to redesign against and no reusable account
+of \emph{which} modes coalesce. Recent neural surrogates (LSTM/DNN reduced-order
+models, black-box flutter-speed regressors) accelerate the forward evaluation but
+inherit that opacity. We ask whether hard-wiring the \emph{eigenstructure of
+flutter} into a tiny transformer yields a glass-box that is competitive in
+accuracy, extrapolates where a fitted surrogate cannot, recovers the mechanism,
+and turns flutter into an optimizable design target.
+
+\section{Method}
+\paragraph{Modal tokens.} A lifting surface is represented by its first $N$
+structural modes (natural frequency, generalized mass, geometry), one token each.
+
+\paragraph{Eigen-structured coupling attention.} The core primitive is a pairwise
+outer product between mode tokens $t_i,t_j$, contracted with a physics-informed
+basis $\phi(k)$ of the reduced frequency $k$ (spanning the Theodorsen circulatory
+envelope $\sim\!1/k,\,1/k^2$), producing a complex, non-symmetric aerodynamic
+influence-coefficient (AIC) operator
+\begin{equation}
+\hat{Q}_{ij}(k) = \sum_f \phi_f(k)\,\big(t_i^\top W_f\, t_j\big).
+\end{equation}
+This generalizes a second-order attention block from predicting \emph{coefficients}
+to predicting an \emph{operator whose spectrum is the answer}.
+
+\paragraph{Differentiable p--k head.} With generalized mass/stiffness $M,K$ assembled
+analytically from the section/wing parameters, the flutter equation
+\begin{equation}
+\big[\,p^2 M + K - (kV)^2\,\hat{Q}(k)\,\big]\,q = 0,\qquad k=\tfrac{|\mathrm{Im}\,p|\,b}{V}
+\end{equation}
+is solved on a velocity grid by an unrolled p--k fixed point. For the 2-DOF
+typical section the $2\times2$ eigenvalues are closed-form (trace/determinant),
+so gradients flow through the entire spectral readout without
+\texttt{torch.linalg.eig} --- portable across CPU, CUDA, and ROCm. Structure is
+known; only the aerodynamic coupling is learned.
+
+\paragraph{Training.} We minimize a Huber loss on the V--g/V--f trajectories, a
+\emph{flutter-point margin} loss (the coalescing branch must have zero damping and
+a real up-crossing at the true flutter speed), and a \emph{low-airspeed stability}
+regularizer (predicted damping must not be positive as $V\!\to\!0$). The last term
+is essential: it smooths the flutter-speed surface enough to differentiate through
+for inverse design (\S\ref{sec:inv}).
+
+\section{Physics validation}
+The ground-truth generator is checked three independent ways. Theodorsen's $C(k)$
+matches the classical table and limits; the p--k and classical k-method flutter
+solutions agree to four decimals (no shared code beyond the aero matrix); and the
+published Hodges \& Pierce typical section is reproduced to \textbf{0.9\%}. The
+Tier-B 3-D solver (assumed modes + strip-theory Theodorsen + $N$-mode p--k)
+reproduces the classic \textbf{Goland wing} flutter point to \textbf{0.1\%}
+($137.0$ vs.\ $137.2$~m/s), converged across mode counts.
+
+\section{Results}
+\paragraph{In-distribution (the black box wins).}
+On a held-out random split, a capacity-matched MLP predicting the scalar flutter
+speed beats FlutterForm ($1.4\%$ vs.\ $2.7\%$ median error). Predicting one number
+from six parameters is an easy regression; we do not claim in-distribution accuracy.
+
+\paragraph{Extrapolation (the headline).}
+Both models are trained \emph{only} on light wings (mass ratio $\mu<40$) and tested
+on heavy wings ($\mu\ge40$). FlutterForm's error grows gently; the MLP's grows
+steeply (Fig.~\ref{fig:extrap}), because $\mu$ enters FlutterForm's mass matrix
+analytically and the learned aero operator is $\mu$-independent --- a heavy wing is
+a known change of matrix, not an unseen region. At the far edge FlutterForm is
+$\sim\!1.6\times$ more accurate (and $\sim\!3\times$ with a smaller, more
+physics-dominated model --- a bias/variance tradeoff we report honestly).
+
+\paragraph{Mechanism and full diagram.}
+FlutterForm identifies the coalescing mode pair with $73\%$ accuracy --- a metric a
+scalar regressor cannot produce --- and predicts the entire V--g/V--f diagram
+through the crossing (Fig.~\ref{fig:vgvf}), not a single number.
+
+\paragraph{Inverse design.}\label{sec:inv}
+Because FlutterForm is differentiable, flutter speed becomes an optimizable
+objective. Optimizing a section's elastic axis, static unbalance, and frequency
+ratio by backprop raises its flutter speed by \textbf{$+37\%$, verified by the
+exact p--k solver}, beating finite-difference-through-p--k ($+8\%$) at a fraction of
+the solver calls.
+
+\paragraph{Data efficiency and operator consistency (honest losses).}
+The MLP is also more data-efficient (it wins at every training-set size). And the
+learned operator reproduces the correct flutter \emph{spectrum} but is \emph{not}
+the literal Theodorsen matrix ($\approx\!67\%$ Frobenius error after gauge
+alignment): the eigenproblem does not pin the operator to basis.
+
+\paragraph{AGARD 445.6.} A reduced 2-mode model captures the subsonic
+flutter-speed-index trend but over-predicts the magnitude by $10\text{--}40\%$; the
+transonic dip is out of scope by construction (attached-flow aerodynamics cannot
+produce shocks).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.62\linewidth]{extrapolation_mu.png}
+\caption{\textbf{Extrapolation.} Both models trained only on $\mu<40$. FlutterForm
+(physics-structured) degrades gently; the MLP (black box) diverges as it
+extrapolates. Crossover at $\mu\approx68$.}
+\label{fig:extrap}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{vg_vf_examples.png}
+\caption{\textbf{Full flutter diagram.} FlutterForm (dashed) tracks the p--k
+ground truth (solid) damping and frequency through the flutter crossing; a scalar
+regressor produces none of this.}
+\label{fig:vgvf}
+\end{figure}
+
+\section{Limitations}
+We state these plainly. (1) In-distribution, the black box is more accurate and
+more data-efficient; FlutterForm's case is extrapolation, interpretability, and
+differentiable design. (2) Mode-ID ($73\%$) is above chance and structurally unique
+but modest. (3) The learned operator is equivalent-but-not-literal Theodorsen.
+(4) AGARD is a reduced-model check; the transonic dip needs CFD-level aero.
+(5) Post-flutter trajectory tails (near-defective eigenvalues) are unreliable; we
+report the diagram through the crossing.
+
+\section{Conclusion}
+A tiny physics-structured glass-box does not beat a black box at the easy
+in-distribution regression, but it \emph{extrapolates} better, \emph{explains} the
+mechanism, predicts the full diagram, and enables verified \emph{gradient-based
+design} --- capabilities a scalar surrogate structurally lacks. Physics structure
+buys generalization and interpretability, not raw fit. Code, data, and figures:
+\url{https://github.com/AbhinavGGarg/FlutterForm}.
+
+\end{document}
