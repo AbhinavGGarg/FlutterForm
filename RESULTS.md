@@ -31,18 +31,20 @@ Predicting one number from six parameters is a regression an MLP is very good at
 
 ## 3. Extrapolation: the headline
 
-Both models are trained **only on light wings (mass ratio μ < 40)** and tested on heavy wings (μ ≥ 40) they never saw. Median flutter-speed error vs μ:
+Both models are trained **only on light wings (mass ratio μ < 40)** and tested on heavy wings (μ ≥ 40) they never saw. Median flutter-speed error vs μ (consistent `d=20` model):
 
 | μ band | FlutterForm | MLP baseline |
 |---|---|---|
-| 40–50 (near training) | 3.5% | **2.0%** |
-| 50–65 | 4.1% | 3.9% |
-| 65–80 | 5.3% | 8.9% |
-| 80–100 (far) | **6.5%** | 18.7% |
+| 40–50 (near training) | 4.0% | **1.9%** |
+| 50–65 | 5.5% | 4.0% |
+| 65–80 | ~7% | ~9% |
+| 80–100 (far) | **~10.5%** | ~16.8% |
 
-There is a clean **crossover at μ ≈ 55**. Near the training boundary the black box is still better; but the further you extrapolate, the more it degrades, while FlutterForm stays flat — because **mass ratio enters FlutterForm's mass matrix analytically and the learned aero operator is μ-independent**, so a heavy wing is a known change of matrix, not an unseen region. At the far edge FlutterForm is **~3× more accurate**.
+FlutterForm's error grows *gently* with distance from the training range; the MLP's grows *steeply*. They **cross over at μ ≈ 68**: near the boundary the black box is still better, but the further you extrapolate the more it degrades, while FlutterForm holds — because **mass ratio enters FlutterForm's mass matrix analytically and the learned aero operator is μ-independent**, so a heavy wing is a known change of matrix, not an unseen region. At the far edge FlutterForm is **~1.6× more accurate**.
 
 ![extrapolation](results_cmp/figs/extrapolation_mu.png)
+
+**A tradeoff worth stating honestly:** a *smaller* `d=16` model (no low-V regularizer) extrapolates even better — crossover at μ≈55 and ~3× advantage at the far edge — but is worse in-distribution and has a rougher V_F surface (which breaks the inverse-design of §6). This is the expected bias/variance behavior: fewer parameters lean harder on the baked-in physics and extrapolate further, at the cost of in-distribution fit. We report the `d=20` model throughout for consistency; the physics-structured model wins extrapolation in *either* configuration.
 
 ## 4. It predicts the whole flutter diagram
 
