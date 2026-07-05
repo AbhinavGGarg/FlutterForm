@@ -27,7 +27,8 @@ frequency, and which modes coalesce — with no mechanism labels).
 | Operator-consistency (learned Q vs Theodorsen) | ✅ done (honest negative — §7 of RESULTS) |
 | **Inverse-design demo** (backprop the flutter boundary) | ✅ **+37% p-k-verified** |
 | AGARD 445.6 external validation | ✅ reduced-model check (trend yes, magnitude over-predicts, transonic out of scope) |
-| Tier-B 3-D wings (assumed modes + strip theory / DLM) | ⏳ future work |
+| **Tier-B 3-D wings** (assumed modes + strip theory + N-mode p-k) | ✅ **validated (Goland 0.1%)** + N-mode differentiable head + dataset gen |
+| Formal paper | ✅ [paper/flutterform.pdf](paper/flutterform.tex) (LaTeX, compiles with tectonic) |
 
 **Physics validation** (`pytest tests/ && python scripts/validate_physics.py`):
 

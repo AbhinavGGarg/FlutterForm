@@ -78,7 +78,21 @@ Because FlutterForm is differentiable, flutter speed becomes an optimizable obje
 
 FlutterForm supplies the design gradient in a single backward pass; the classical route pays `(#vars+1)` p-k solves per optimization step. The FlutterForm-optimized section's flutter-speed gain is **confirmed by the exact p-k solver**, so the model's gradient points in a physically correct direction — moving the elastic axis forward, a known flutter-speed-increasing redesign. This is the capability a forward-only surrogate (or a scalar black box used naively) cannot provide reliably; it required a low-airspeed-stability regularizer so the model's V_F surface is smooth enough to differentiate through (see §7).
 
-## 7. Honest limitations
+## 7. Tier-B: 3-D wings
+
+The method extends beyond the 2-DOF typical section to full 3-D cantilever
+wings (`flutterform/tierb.py`): assumed-modes (clamped-free bending + torsion)
++ strip-theory Theodorsen + an **N-mode p-k solve**. It reproduces the classic
+**Goland wing** flutter point to **0.1%** (137.0 vs. published 137.2 m/s;
+frequency 70.1 vs. 70.7 rad/s), converged across mode counts. The
+**differentiable N-mode eigen head** (`flutterform/model/nmode.py`) reproduces
+the numpy p-k solver to <5% and passes gradients — so FlutterForm's
+eigen-structured architecture is complete for 3-D wings (the coupling attention
+already emits an N×N operator by construction). A parametric wing-family dataset
+generator (`data/generate_tierb.py`) is included; large-scale neural training on
+Tier-B is the natural next run (the Tier-A findings are expected to carry over).
+
+## 8. Honest limitations
 
 We state these plainly rather than bury them:
 
