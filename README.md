@@ -13,16 +13,21 @@ frequency, and which modes coalesce — with no mechanism labels).
 
 ## Status
 
+**➡️ Full results and honest limitations: [RESULTS.md](RESULTS.md).** Headline: FlutterForm (6.6k params) loses to a black-box MLP *in-distribution* but **extrapolates ~3× better** to unseen mass ratios, recovers the coalescence mechanism (~73%), predicts the full flutter diagram, and enables **+37% p-k-verified inverse design** by backprop.
+
 | Component | State |
 |---|---|
-| Physics core (Theodorsen, typical section, p-k, k-method) | ✅ built + **validated** |
-| Tier-A dataset generator (`data/generate_pk.py`) | ✅ built + run (400-section dev shard) |
-| FlutterForm model (tokenizer → coupling → eigen head) | ✅ built, **2,436 params**, trains |
-| `train.py mode=tierA` (smoke contract `train.max_steps=1`) | ✅ runs clean on CPU |
-| Baselines (capacity-matched LSTM/DNN), full eval suite | ⏳ sprint |
-| Tier-B 3-D wings (assumed modes + strip theory / DLM) | ⏳ sprint |
-| AGARD 445.6 external validation | ⏳ sprint |
-| Inverse-design demo (backprop through the flutter boundary) | ⏳ sprint |
+| Physics core (Theodorsen, typical section, p-k, k-method) | ✅ built + **validated** (H&P 0.9%) |
+| Tier-A dataset generator (`data/generate_pk.py`) | ✅ built + run (50k sections) |
+| FlutterForm model (tokenizer → coupling → eigen head) | ✅ built, **6,620 params** (d=20), trains |
+| `train.py mode=tierA` (smoke contract `train.max_steps=1`) | ✅ runs clean on CPU / MI300X |
+| Capacity-matched MLP baseline + full eval suite | ✅ done (`eval.py`, `baseline.py`) |
+| In-distribution + **extrapolation** results | ✅ done (extrapolation = the headline) |
+| Data-efficiency curves | 🔄 running |
+| Operator-consistency (learned Q vs Theodorsen) | ✅ done (honest negative — §7 of RESULTS) |
+| **Inverse-design demo** (backprop the flutter boundary) | ✅ **+37% p-k-verified** |
+| AGARD 445.6 external validation | ✅ reduced-model check (trend yes, magnitude over-predicts, transonic out of scope) |
+| Tier-B 3-D wings (assumed modes + strip theory / DLM) | ⏳ future work |
 
 **Physics validation** (`pytest tests/ && python scripts/validate_physics.py`):
 
