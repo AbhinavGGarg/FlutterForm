@@ -41,9 +41,10 @@ introduce \textbf{FlutterForm}, a $6{,}620$-parameter physics-structured model
 that tokenizes a lifting surface into its structural modes, forms the
 aerodynamic coupling operator by a pairwise \emph{outer-product} attention, and
 reads the flutter boundary from a \emph{differentiable p--k eigen-solve}. On a
-$50$k-section benchmark with a validated Theodorsen/p--k ground truth we report
-honestly: a capacity-matched black-box MLP is more accurate \emph{in-distribution}
-($1.4\%$ vs.\ $2.7\%$ median flutter-speed error) and more data-efficient. The
+$50$k-section benchmark with a validated Theodorsen/p--k ground truth the
+comparison is mixed: a capacity-matched black-box MLP is more accurate
+\emph{in-distribution} ($1.4\%$ vs.\ $2.7\%$ median flutter-speed error) and more
+data-efficient. The
 value of physics structure lies elsewhere and is measurable: FlutterForm
 extrapolates far better to unseen mass ratios (the black box's error grows up to
 $10\times$ while FlutterForm's stays flat), recovers \emph{which} modes coalesce
@@ -72,10 +73,10 @@ transformer yields a glass-box that is competitive in accuracy, extrapolates
 where a fitted surrogate cannot, recovers the mechanism, and turns flutter into
 an optimizable design target. Our answer is a physics-structured model whose
 latent is the aeroelastic eigenproblem itself, trained against a validated
-classical ground truth. We are candid about where it loses: predicting a scalar
-flutter speed from a few parameters is an easy regression that a black box wins.
-The interesting --- and, we argue, more useful --- axes are generalization,
-interpretability, and differentiability.
+classical ground truth. The model does not improve on the baseline in every
+setting: predicting a scalar flutter speed from a few parameters is a simple
+regression on which a black box performs better. The more informative
+comparisons are generalization, interpretability, and differentiability.
 
 \paragraph{Contributions}
 \begin{enumerate}\setlength{\itemsep}{1pt}
@@ -87,7 +88,7 @@ off the flutter boundary (\S\ref{sec:method}).
 against the classical k-method (agreement to four decimals) and the published
 Hodges \& Pierce point ($0.9\%$), with a 3-D extension validated on the Goland
 wing to $0.1\%$ (\S\ref{sec:phys}).
-\item An honest, artifact-backed comparison against a capacity-matched black box:
+\item An artifact-backed comparison against a capacity-matched black box:
 the black box wins in-distribution accuracy and data efficiency; FlutterForm wins
 extrapolation, mode identification, and full-diagram prediction (\S\ref{sec:res}).
 \item A differentiable-design result: backprop through the model raises a
@@ -250,15 +251,14 @@ MLP attains $1.4\%$ median flutter-speed error versus FlutterForm's $2.7\%$.
 Predicting one number from six parameters is an easy regression; we do not claim
 in-distribution accuracy as a contribution.
 
-\paragraph{Extrapolation (the headline)} Both models are trained \emph{only} on
+\paragraph{Extrapolation} Both models are trained \emph{only} on
 light wings ($\mu<40$) and tested on heavy wings ($\mu\ge40$). FlutterForm's error
 grows gently while the MLP's grows steeply (Fig.~\ref{fig:extrap}), because $\mu$
 enters FlutterForm's mass matrix analytically and the learned aero operator is
 $\mu$-independent --- a heavy wing is a known change of matrix, not an unseen
 region. They cross over near $\mu\!\approx\!68$; at the far edge FlutterForm is
 $\sim\!1.6\times$ more accurate (and $\sim\!3\times$ with a smaller,
-more physics-dominated model --- a bias/variance tradeoff we report rather than
-hide).
+more physics-dominated model, a bias/variance tradeoff).
 
 \paragraph{Mechanism and full diagram} FlutterForm identifies the coalescing mode
 pair with $73\%$ accuracy and predicts the entire V--g/V--f diagram through the
@@ -270,7 +270,7 @@ $\mathbf{+37\%}$, \emph{verified by the exact p--k solver}, beating
 finite-difference-through-p--k ($+8\%$) at a fraction of the solver calls. This
 is the capability a forward-only or scalar surrogate structurally lacks.
 
-\paragraph{Honest losses} The MLP is also more data-efficient (it wins at every
+\paragraph{Where the black box wins} The MLP is also more data-efficient (it wins at every
 training-set size: a scalar regression saturates on $<\!1{,}000$ examples). And the
 learned operator reproduces the correct flutter \emph{spectrum} but is \emph{not}
 the literal Theodorsen matrix ($\approx\!67\%$ Frobenius error after gauge
@@ -328,6 +328,15 @@ source and reproducible from a fixed seed:
 $32$ automated tests, including the Hodges \& Pierce ($0.9\%$) and Goland ($0.1\%$)
 anchors.
 
+\section*{AI-use disclosure}
+A large language model (Anthropic's Claude) was used extensively as an assistant
+throughout this project, under the author's direction: for software
+implementation, experiment scaffolding, and the drafting and editing of this
+manuscript. The author defined the research direction and design decisions,
+reviewed the outputs, checked the numerical results and the cited references, and
+is responsible for the content. This disclosure is provided in accordance with the
+engRxiv AI policy.
+
 \begin{thebibliography}{99}\small
 \bibitem[Bisplinghoff et al.(1955)]{bisplinghoff1955} R.~L. Bisplinghoff, H.~Ashley, and R.~L. Halfman. \emph{Aeroelasticity}. Addison-Wesley, 1955.
 \bibitem[Goland(1945)]{goland1945} M.~Goland. The flutter of a uniform cantilever wing. \emph{J. Applied Mechanics}, 12(4):A197--A208, 1945.
@@ -341,8 +350,8 @@ anchors.
 \bibitem[Bhatia \& Selvaraj(2026)]{foilcore} A.~S. Bhatia and J.~Selvaraj. In-context memory along airfoil polars (FoilCORE). \emph{Exea Labs}, 2026.
 \bibitem[Bhatia(2026)]{foilform} A.~S. Bhatia. Ultra-compact geometry-aware transformers for airfoil polar prediction (FoilForm). \emph{Exea Labs}, 2026.
 \bibitem[Sharma(2026)]{sdformer} A.~Sharma. SD-Former: sparse directed attention as a structural prior for physiological time series. \emph{Exea Labs}, 2026.
-\bibitem[Panel-flutter DL(2024)]{panelflutter2024} Application of deep learning models to predict panel flutter in aerospace structures. \emph{Aerospace}, 11(8):677, 2024.
-\bibitem[Transonic LSTM(2020)]{transoniclstm2020} Efficient prediction of transonic flutter boundaries via LSTM networks. \emph{Aerospace Science and Technology}, 2020.
+\bibitem[Aerospace(2024)]{panelflutter2024} Application of deep learning models to predict panel flutter in aerospace structures. \emph{Aerospace (MDPI)}, 11(8):677, 2024.
+\bibitem[Li et al.(2021)]{transoniclstm2020} W.~Li, X.~Gao, and H.~Liu. Efficient prediction of transonic flutter boundaries for varying Mach number and angle of attack via LSTM network. \emph{Aerospace Science and Technology}, 110:106451, 2021.
 \end{thebibliography}
 
 \end{document}
