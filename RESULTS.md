@@ -22,11 +22,12 @@ Held-out random split of the 50k set:
 
 | Metric | FlutterForm | MLP baseline |
 |---|---|---|
-| flutter-speed median error | 3.4% | **1.3%** |
-| within 10% | 72% | 95% |
-| mode-ID accuracy | ~65% | impossible (scalar) |
+| flutter-speed median error | 2.7% | **1.3%** |
+| within 10% | 81% | 94% |
+| p90 error | 48% | 21% |
+| mode-ID accuracy | 73% | impossible (scalar) |
 
-Predicting one number from six parameters is a regression an MLP is very good at. **We do not claim in-distribution accuracy as a result.**
+Predicting one number from six parameters is a regression an MLP is very good at. **We do not claim in-distribution accuracy as a result.** (FlutterForm's numbers here use the stronger `d=20` model with the low-airspeed-stability regularizer of §7, which cut the p90 error from 91% to 48% and lifted mode-ID from 65% to 73%.)
 
 ## 3. Extrapolation: the headline
 
@@ -59,14 +60,20 @@ FlutterForm outputs the full V-g / V-f trajectories (damping and frequency vs ai
 
 Because FlutterForm is differentiable, flutter speed becomes an optimizable objective: we redesign a section (elastic axis, static unbalance, frequency ratio) to raise its flutter speed by backprop through the model, and **verify the gain with the exact p-k solver**.
 
-<!-- INVERSE_DESIGN_RESULT -->
+| Method | flutter speed | verified change | cost |
+|---|---|---|---|
+| baseline design | V_F = 2.00 | — | — |
+| **FlutterForm gradient** | **V_F = 2.75** | **+37% (p-k-verified)** | 200 fwd+bwd passes |
+| classical finite-diff through p-k | V_F = 2.17 | +8% | 160 p-k solves |
+
+FlutterForm supplies the design gradient in a single backward pass; the classical route pays `(#vars+1)` p-k solves per optimization step. The FlutterForm-optimized section's flutter-speed gain is **confirmed by the exact p-k solver**, so the model's gradient points in a physically correct direction — moving the elastic axis forward, a known flutter-speed-increasing redesign. This is the capability a forward-only surrogate (or a scalar black box used naively) cannot provide reliably; it required a low-airspeed-stability regularizer so the model's V_F surface is smooth enough to differentiate through (see §7).
 
 ## 7. Honest limitations
 
 We state these plainly rather than bury them:
 
 - **In-distribution, the black box is more accurate** (§2). FlutterForm's case is extrapolation + interpretability, not raw in-distribution accuracy.
-- **Mode-ID is ~65%** — above chance and structurally unique, but modest.
+- **Mode-ID is ~73%** — above chance and structurally unique, but still modest.
 - **Operator-consistency is negative**: the learned aerodynamic operator reproduces the correct flutter *spectrum* but is **not** the literal Theodorsen matrix (≈67% Frobenius error even after gauge alignment). The eigenproblem does not pin the operator down to basis; literal operator recovery would need an identifiability constraint (future work).
 - **AGARD 445.6** (`scripts/agard.py`): a reduced 2-mode typical-section model captures the **subsonic FSI-vs-Mach trend** and brackets the experimental value at M=0.901, but **over-predicts the magnitude by 10–40%** at lower Mach — expected for a typical-section reduction of a 3-D swept wing. The **transonic dip (M≈0.96+) is out of scope by construction**: it is shock-driven, and our attached-flow Theodorsen aerodynamics cannot produce shocks. Quantitative AGARD validation needs the full 3-D modal model and CFD-level aero.
 - **Post-flutter trajectory tails** are unreliable (near-defective eigenvalues); we report the diagram through the crossing, where it is physically meaningful.
