@@ -52,11 +52,19 @@ FlutterForm outputs the full V-g / V-f trajectories (damping and frequency vs ai
 
 ![vg-vf](results_cmp/figs/vg_vf_examples.png)
 
-## 5. Data efficiency
+## 5. Data efficiency — also the black box (reported honestly)
 
-*(median in-distribution flutter-speed error vs training-set fraction)*
+Median in-distribution flutter-speed error vs training-set size:
 
-<!-- DATA_EFFICIENCY_TABLE -->
+| train fraction | #configs | FlutterForm | MLP baseline |
+|---|---|---|---|
+| 2% | ~880 | 4.4% | **1.2%** |
+| 10% | ~4,400 | 3.6% | **1.2%** |
+| 100% | 44,024 | 2.7% | **1.4%** |
+
+**FlutterForm does not win here.** The scalar `params → V_F` map is such an easy regression that ~880 examples already saturate the MLP. Physics structure does *not* buy data efficiency on this problem — it buys **extrapolation** (§3) and **mechanism/design** capabilities (§4, §6), which are different axes. We include this table because it would be dishonest to omit a clean loss.
+
+![data-efficiency](results_cmp/figs/data_efficiency.png)
 
 ## 6. Inverse design (differentiable-design payoff)
 
@@ -74,7 +82,7 @@ FlutterForm supplies the design gradient in a single backward pass; the classica
 
 We state these plainly rather than bury them:
 
-- **In-distribution, the black box is more accurate** (§2). FlutterForm's case is extrapolation + interpretability, not raw in-distribution accuracy.
+- **In-distribution, the black box is more accurate** (§2), **and more data-efficient** (§5) — it wins the scalar-accuracy game at every training-set size. FlutterForm's case is extrapolation + interpretability + differentiable design, not raw in-distribution accuracy.
 - **Mode-ID is ~73%** — above chance and structurally unique, but still modest.
 - **Operator-consistency is negative**: the learned aerodynamic operator reproduces the correct flutter *spectrum* but is **not** the literal Theodorsen matrix (≈67% Frobenius error even after gauge alignment). The eigenproblem does not pin the operator down to basis; literal operator recovery would need an identifiability constraint (future work).
 - **AGARD 445.6** (`scripts/agard.py`): a reduced 2-mode typical-section model captures the **subsonic FSI-vs-Mach trend** and brackets the experimental value at M=0.901, but **over-predicts the magnitude by 10–40%** at lower Mach — expected for a typical-section reduction of a 3-D swept wing. The **transonic dip (M≈0.96+) is out of scope by construction**: it is shock-driven, and our attached-flow Theodorsen aerodynamics cannot produce shocks. Quantitative AGARD validation needs the full 3-D modal model and CFD-level aero.

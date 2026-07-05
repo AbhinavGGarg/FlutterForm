@@ -1,0 +1,90 @@
+{
+  "cfg": {
+    "ckpt": "/tmp/ff_de0.1/flutterform_tierA.pt",
+    "data": "data/tierA_50k.npz",
+    "baseline": "/tmp/bl_de0.1/baseline.pt",
+    "out": "/tmp/de_0.1.json",
+    "n_v": 96,
+    "device": "cpu",
+    "holdout.col": "",
+    "holdout.thresh": 0.0
+  },
+  "n_val": 4892,
+  "flutterform": {
+    "tag": "FlutterForm",
+    "coverage": 0.999795584627964,
+    "vf_median_%": 3.5538008788513076,
+    "vf_mean_%": 11.77076620835481,
+    "vf_p90_%": 31.949130360234477,
+    "within_5%": 62.461664281333064,
+    "within_10%": 80.06542629319158,
+    "mode_id_acc_%": 74.36107135555102,
+    "mode_id_n": 4891
+  },
+  "flutterform_regions": [
+    {
+      "region": "mu in [5,15)",
+      "n": 1757,
+      "vf_median_%": 3.30666517704613,
+      "within_10%": 76.99316628701595
+    },
+    {
+      "region": "mu in [15,40)",
+      "n": 1637,
+      "vf_median_%": 3.3285815920024975,
+      "within_10%": 86.92730604764813
+    },
+    {
+      "region": "mu in [40,100)",
+      "n": 1498,
+      "vf_median_%": 4.103834318487119,
+      "within_10%": 76.16822429906543
+    },
+    {
+      "region": "mach in [0.0,0.25)",
+      "n": 1733,
+      "vf_median_%": 3.446763201472427,
+      "within_10%": 79.80380842469705
+    },
+    {
+      "region": "mach in [0.25,0.5)",
+      "n": 1752,
+      "vf_median_%": 3.3701615547993273,
+      "within_10%": 83.15248429468875
+    },
+    {
+      "region": "mach in [0.5,0.7)",
+      "n": 1407,
+      "vf_median_%": 3.9077018244888952,
+      "within_10%": 76.54584221748401
+    },
+    {
+      "region": "sigma in [0.2,0.45)",
+      "n": 1486,
+      "vf_median_%": 2.282481599641384,
+      "within_10%": 88.08080808080808
+    },
+    {
+      "region": "sigma in [0.45,0.7)",
+      "n": 1565,
+      "vf_median_%": 3.160586377018779,
+      "within_10%": 89.96805111821087
+    },
+    {
+      "region": "sigma in [0.7,1.0)",
+      "n": 1841,
+      "vf_median_%": 6.263719847551311,
+      "within_10%": 65.18196632265074
+    }
+  ],
+  "baseline": {
+    "tag": "MLP baseline",
+    "coverage": 1.0,
+    "vf_median_%": 1.2501174211502075,
+    "vf_mean_%": 7.887656211853027,
+    "vf_p90_%": 6.739841461181641,
+    "within_5%": 87.14227309893704,
+    "within_10%": 92.49795584627964,
+    "mode_id_acc_%": null
+  }
+}
