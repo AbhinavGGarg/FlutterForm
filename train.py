@@ -33,6 +33,7 @@ DEFAULTS = {
     "train.batch": 32,
     "train.lr": 3e-3,
     "train.w_flutter": 1.0,      # weight on the direct flutter-point loss
+    "train.w_lowv": 0.5,         # weight on low-airspeed stability regularizer
     "train.warmup": 200,
     "train.eval_every": 500,
     "train.n_v": 64,
@@ -144,7 +145,14 @@ def main(argv=None):
             gam, om = model.vg_vf(params, V)
             l_traj = trajectory_loss(gam, om, gam_t, om_t)
             l_fp = flutter_point_loss(gam, om, V, fv, fw)
-            loss = l_traj + cfg["train.w_flutter"] * l_fp
+            # low-V stability: at very low airspeed the aeroelastic system is
+            # stable (V->0 reduces to the undamped structure), so predicted
+            # damping there must not be positive. Directly fights the spurious
+            # early crossings that wreck V_F and its parameter gradients.
+            low = (V.unsqueeze(0) < 0.5 * fv.clamp_min(0.4).unsqueeze(1))  # (B,nV)
+            lowmask = low.unsqueeze(-1).to(gam.dtype)            # (B,nV,1)
+            l_lowv = (torch.relu(gam) * lowmask).sum() / (lowmask.sum() * 2 + 1e-6)
+            loss = l_traj + cfg["train.w_flutter"] * l_fp + cfg["train.w_lowv"] * l_lowv
 
             opt.zero_grad(set_to_none=True)
             loss.backward()
