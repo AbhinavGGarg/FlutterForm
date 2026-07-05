@@ -17,6 +17,7 @@ structure-preserving transform. We therefore report BOTH:
 
 import sys
 
+import sys as _s; from pathlib import Path as _P; _s.path.insert(0, str(_P(__file__).resolve().parents[1]))
 import numpy as np
 import torch
 

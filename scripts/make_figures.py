@@ -21,6 +21,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from flutterform.data import TierADataset  # noqa: E402
 from flutterform.model import FlutterForm  # noqa: E402
 from flutterform.physics import Section, pk_sweep  # noqa: E402
@@ -68,6 +69,11 @@ def vg_vf_figure(cfg, outdir):
             axf.plot(truth.V, truth.frequency[s], color=TR, lw=2, alpha=0.55)
             axf.plot(Vn, om[:, s], color=FG, lw=1.4, ls="--")
         axg.axhline(0, color="#888", lw=0.7)
+        # focus on the physically-meaningful pre/at-flutter region; past
+        # flutter the linear model is moot and eigen-branches are near-defective
+        xhi = min(8.0, (truth.flutter_V or 3.0) * 1.8 + 0.5)
+        axg.set_xlim(0, xhi)
+        axf.set_xlim(0, xhi)
         if truth.flutter_V:
             axg.axvline(truth.flutter_V, color="#444", lw=0.8, ls=":")
         axg.set_title(f"mu={sec.mu:.0f}  sigma={sec.sigma:.2f}  M={sec.mach:.2f}",
@@ -77,8 +83,8 @@ def vg_vf_figure(cfg, outdir):
             axf.set_ylabel("frequency  Im p")
             axg.legend(fontsize=8, loc="upper left")
         axf.set_xlabel("reduced velocity V")
-    fig.suptitle("FlutterForm predicts the whole V-g / V-f flutter diagram "
-                 "(dashed) vs p-k ground truth (solid)", fontsize=11)
+    fig.suptitle("FlutterForm predicts the V-g / V-f flutter diagram through "
+                 "the crossing (dashed) vs p-k ground truth (solid)", fontsize=11)
     fig.tight_layout()
     fig.savefig(outdir / "vg_vf_examples.png", dpi=130)
     plt.close(fig)

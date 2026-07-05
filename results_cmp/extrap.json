@@ -1,0 +1,90 @@
+{
+  "cfg": {
+    "ckpt": "/tmp/ff_extrap_local/flutterform_tierA.pt",
+    "data": "data/tierA_50k.npz",
+    "baseline": "/tmp/bl_extrap_local/baseline.pt",
+    "out": "/tmp/extrap_local.json",
+    "n_v": 96,
+    "device": "cpu",
+    "holdout.col": "mu",
+    "holdout.thresh": 40.0
+  },
+  "n_val": 15182,
+  "flutterform": {
+    "tag": "FlutterForm",
+    "coverage": 1.0,
+    "vf_median_%": 4.5907045326070355,
+    "vf_mean_%": 8.669681014586642,
+    "vf_p90_%": 14.313730726689112,
+    "within_5%": 53.61612435779213,
+    "within_10%": 80.92477934395995,
+    "mode_id_acc_%": 63.23277565538137,
+    "mode_id_n": 15182
+  },
+  "flutterform_regions": [
+    {
+      "region": "mu in [5,15)",
+      "n": 0,
+      "vf_median_%": null,
+      "within_10%": null
+    },
+    {
+      "region": "mu in [15,40)",
+      "n": 0,
+      "vf_median_%": null,
+      "within_10%": null
+    },
+    {
+      "region": "mu in [40,100)",
+      "n": 15182,
+      "vf_median_%": 4.5907045326070355,
+      "within_10%": 80.92477934395995
+    },
+    {
+      "region": "mach in [0.0,0.25)",
+      "n": 5349,
+      "vf_median_%": 5.0073249020784765,
+      "within_10%": 81.80968405309403
+    },
+    {
+      "region": "mach in [0.25,0.5)",
+      "n": 5498,
+      "vf_median_%": 4.3429803858777385,
+      "within_10%": 80.99308839578029
+    },
+    {
+      "region": "mach in [0.5,0.7)",
+      "n": 4335,
+      "vf_median_%": 4.355427662795719,
+      "within_10%": 79.74625144175317
+    },
+    {
+      "region": "sigma in [0.2,0.45)",
+      "n": 4762,
+      "vf_median_%": 4.897636094288213,
+      "within_10%": 84.35531289374212
+    },
+    {
+      "region": "sigma in [0.45,0.7)",
+      "n": 4680,
+      "vf_median_%": 3.713353730686931,
+      "within_10%": 86.02564102564104
+    },
+    {
+      "region": "sigma in [0.7,1.0)",
+      "n": 5740,
+      "vf_median_%": 5.209722634822672,
+      "within_10%": 73.9198606271777
+    }
+  ],
+  "baseline": {
+    "tag": "MLP baseline",
+    "coverage": 1.0,
+    "vf_median_%": 5.290703296661377,
+    "vf_mean_%": 9.735361099243164,
+    "vf_p90_%": 24.454750061035156,
+    "within_5%": 48.359899881438544,
+    "within_10%": 68.0476880516401,
+    "mode_id_acc_%": null
+  }
+}
