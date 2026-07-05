@@ -199,12 +199,27 @@ section descriptor directly to $(\log V_F,\log\omega_F)$ --- the standard neural
 surrogate. It has no representation of the mechanism and cannot produce
 trajectories or mode identity; those gaps are themselves results.
 
-\paragraph{Implementation} All experiments run in pure PyTorch on an AMD Instinct
-MI300X (ROCm) and on CPU, with identical numerics. FlutterForm uses model width
-$d\!=\!20$; training uses Adam, cosine learning-rate decay with warmup, gradient
-clipping, and best-validation checkpointing over seeds $\{42,123,7,0,256\}$. We
-make no significance claims from single-seed studies. Metrics: median/relative
-flutter-speed error, coalescing-mode-pair accuracy, and V--g/V--f RMSE.
+\paragraph{Training} FlutterForm uses model width $d\!=\!20$; training uses Adam,
+cosine learning-rate decay with warmup, gradient clipping, and best-validation
+checkpointing over seeds $\{42,123,7,0,256\}$. We make no significance claims from
+single-seed studies. Metrics: median/relative flutter-speed error,
+coalescing-mode-pair accuracy, and V--g/V--f RMSE.
+
+\paragraph{Compute (AMD MI300X)} All training and evaluation run on a single
+\textbf{AMD Instinct MI300X} ($192$~GB HBM3) under ROCm~7.2 with the PyTorch~2.10
+ROCm build, and identically on CPU. We deliberately keep the hot path free of
+CUDA-only kernels: no FlashAttention, no xformers, no custom Triton, and --- for
+the 2-DOF section --- a closed-form $2\times2$ eigen-solve (trace/determinant) in
+place of \texttt{torch.linalg.eig}, so gradients flow through the spectral readout
+with identical numerics on CPU, CUDA, and ROCm; only the $N$-mode Tier-B head uses
+a general batched eigensolve. Because the model is small ($6.6$k parameters) and
+the eigen head is cheap, training is bound by host--device data movement rather
+than by GPU compute; we therefore run in bf16 with a large batch ($256$) to keep
+the MI300X fed, which reaches $\sim\!60$ optimizer steps/s --- a full $3{,}000$-step
+run in under a minute on an uncontended node. The p--k dataset generation is
+CPU-bound and parallelized across cores (seed-deterministic regardless of worker
+count). We verified forward and backward passes with finite gradients on the
+MI300X, and the full $32$-test suite runs on the node.
 
 \section{Results}\label{sec:res}
 Table~\ref{tab:summary} summarizes the comparison; details follow.
