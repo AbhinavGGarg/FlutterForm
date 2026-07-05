@@ -172,7 +172,7 @@ trajectories, a \emph{flutter-point margin} loss (the coalescing branch must hav
 zero damping and a real up-crossing at the true flutter speed), and a
 \emph{low-airspeed stability} regularizer (predicted damping must not be positive
 as $V\!\to\!0$, since the system reduces to the undamped structure). The last term
-is essential: without it the model develops spurious low-speed instabilities that
+does real work: without it the model develops spurious low-speed instabilities that
 corrupt the flutter-speed surface and its parameter gradients (it cut the $90$th
 percentile error from $91\%$ to $48\%$ and enabled inverse design, \S\ref{sec:res}).
 
