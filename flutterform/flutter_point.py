@@ -18,11 +18,21 @@ import torch
 _OSC_MIN = 5e-3
 
 
-def hard_flutter_speed(gamma, omega, V):
-    """Exact first zero-up-crossing per config. (B,nV,2) -> V_F, omega_F (B,)."""
+def hard_flutter_speed(gamma, omega, V, persist: int = 3):
+    """First SUSTAINED zero-up-crossing per config. (B,nV,2) -> V_F, omega_F (B,).
+
+    A genuine flutter onset is a sustained instability: once damping crosses
+    zero it stays positive. Transient single-point wiggles (common in a
+    surrogate's damping curve near V~0) are not flutter, so we require the
+    damping to remain positive for `persist` grid points after the crossing
+    (or through the end of the grid). This removes spurious early crossings
+    that otherwise wreck the flutter-speed estimate and its parameter
+    gradients.
+    """
     g = np.asarray(gamma)
     o = np.abs(np.asarray(omega))
     Vn = np.asarray(V)
+    n = g.shape[1]
     B = g.shape[0]
     vf = np.full(B, np.nan)
     wf = np.full(B, np.nan)
@@ -30,15 +40,20 @@ def hard_flutter_speed(gamma, omega, V):
         best = None
         for s in range(g.shape[2]):
             gs, ws = g[b, :, s], o[b, :, s]
-            up = ((gs[:-1] <= 0) & (gs[1:] > 0)
-                  & (ws[:-1] > _OSC_MIN) & (ws[1:] > _OSC_MIN))
-            if up.any():
-                j = int(np.argmax(up))
+            for j in range(n - 1):
+                if not (gs[j] <= 0 < gs[j + 1]
+                        and ws[j] > _OSC_MIN and ws[j + 1] > _OSC_MIN):
+                    continue
+                # sustained: damping stays positive for the next `persist` pts
+                hi = min(j + 1 + persist, n)
+                if np.any(gs[j + 1:hi] <= 0):
+                    continue
                 t = -gs[j] / (gs[j + 1] - gs[j] + 1e-30)
                 v = Vn[j] + t * (Vn[j + 1] - Vn[j])
                 w = ws[j] + t * (ws[j + 1] - ws[j])
                 if best is None or v < best[0]:
                     best = (v, w)
+                break
         if best is not None:
             vf[b], wf[b] = best
     return vf, wf
